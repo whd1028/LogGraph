@@ -5,6 +5,7 @@ import re
 import matplotlib.pyplot as plt
 from SqlConn import SqlConn
 from DB_table import Log, Scroll_Data
+from typing import Tuple
 
 
 class LogGraph():
@@ -64,7 +65,7 @@ class LogGraph():
         return cdid_df.value_counts().iloc[:5]
 
     @staticmethod  # 회원들의 성별 많이 읽은 뉴스기사 TOP 5
-    def make_graph_gender_like_news() -> pd.DataFrame:
+    def make_graph_gender_like_news() -> Tuple[pd.Series,pd.Series]:
         # 1. Log테이블에서 user_id가 있는 모든 사용자들의 URL을 얻어온다.
         query_URL = f"select Log.URL, m.sex from Log inner join memberinfo  as m on Log.user_id = m.id "
         urls_sex = LogGraph.selectData(query_URL)
@@ -72,16 +73,30 @@ class LogGraph():
         # 2. 얻어온 URL에서 기사의 n_id를 얻어온다.
         urls_sex_df = pd.DataFrame(urls_sex, columns=['URL', 'sex'])
         urls_sex_df['URL'] = urls_sex_df['URL'].apply(lambda x: re.search("/news/news_post/([0-9]*)",x).group(1))
+        urls_sex_df.rename(columns={'URL':'nid'}, inplace=True) # URL에서 nid를 추출했으니 컬럼 이름도 바꿔주자
 
         # 3. 성별 n_id를 카운트한다.
         male_series = urls_sex_df[urls_sex_df['sex'] == '남자'].value_counts()
         female_series = urls_sex_df[urls_sex_df['sex'] == '여자'].value_counts()
-        gender_df = pd.DataFrame(data={'male':male_series, 'female':female_series})
+        return (male_series, female_series)
+        # gender_df = pd.DataFrame(data={'male':male_series, 'female':female_series})
         # test = urls_sex_df.value_counts()
         ...
 
-    @staticmethod  # 회원들의 연령대별 많이 읽은 뉴스기사
+    @staticmethod  # 회원들의 연령대(10,20,30,40,50)별 많이 읽은 뉴스기사 TOP 5
     def make_graph_age_like_news() -> pd.DataFrame:
+        # 1. 모든 회원들의 로그에서 URL(/news_post/<n_id>)*과 생년일을 얻어온다.(*{n_id값 추출할 예정})
+        query = f"select l.URL, m.birth from Log as l inner join memberinfo as m on l.user_id = m.id"
+        url_birth = LogGraph.selectData(query)
+
+        # 2. 연령대별로 인원 구하기
+        url_birth_df = pd.DataFrame(url_birth, columns=['URL', 'birth'])
+        url_birth_df['URL'] = url_birth_df['URL'].apply(lambda x: re.search("/news/news_post/([0-9]*)",x).group(1))
+        url_birth_df.rename(columns={'URL':'nid'}, inplace=True) # URL에서 nid를 추출했으니 컬럼 이름도 바꿔주자
+
+        
+
+
         ...
 
     ...
@@ -89,7 +104,6 @@ class LogGraph():
 
 if __name__ == "__main__":
     # print(LogGraph.make_graph_individual_like_press('park_test'))
-    LogGraph.make_graph_gender_like_news()
-
+    print(*LogGraph.make_graph_gender_like_news())
     
     ...
